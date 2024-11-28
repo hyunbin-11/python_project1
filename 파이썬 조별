@@ -1,0 +1,113 @@
+import pandas as pd
+
+# 첫 번째 코드에서 사용하는 메인 CSV 파일
+main_file_path = "/content/sample_data/취업.csv"
+
+# 두 번째 코드에서 사용하는 분야별 CSV 파일
+file_paths = {
+    "IT 및 기술 개발 기업": "/content/sample_data/IT 및 기술 개발 기업.csv",
+    "경영 지원 및 컨설팅 기업": "/content/sample_data/경영 지원 및 컨설팅 기업.csv",
+    "데이터분석 기업": "/content/sample_data/데이터분석 기업.csv",
+    "마케팅 및 기획 기업": "/content/sample_data/마케팅 및 기획 기업.csv",
+    "물류 및 SCM기업": "/content/sample_data/물류 및 SCM기업.csv",
+    "서비스 및 영업 기업": "/content/sample_data/서비스 및 영업 기업.csv",
+    "제조 및 생산 기업": "/content/sample_data/제조 및 생산 기업.csv",
+}
+
+# 모든 데이터를 통합
+all_data = []
+for name, path in file_paths.items():
+    try:
+        df = pd.read_csv(path, encoding='euc-kr')
+        df['분야'] = name  # 각 데이터에 분야 추가
+        all_data.append(df)
+    except Exception as e:
+        print(f"Error loading {name}: {e}")
+
+# 통합 데이터프레임 생성
+sector_job_data = pd.concat(all_data, ignore_index=True)
+
+# 메인 CSV 파일 데이터 로드
+main_job_data = pd.read_csv(main_file_path, encoding='euc-kr')
+
+# 프로그램 시작
+def job_assistant():
+    while True:  # 사용자 종료 선택 전까지 프로그램이 반복 실행
+        print("\n산업경영공학과 졸업생을 위한 취업 도우미 프로그램입니다!")
+        print("\n1. 요약된 분야별 취업 정보 보기")
+        print("2. 상세 기업별 취업 공고 보기")
+        print("0. 종료")
+
+        try:
+            main_choice = int(input("\n원하는 기능의 번호를 입력하세요: "))
+
+            if main_choice == 0:
+                print("프로그램을 종료합니다.")
+                break  # 루프 종료
+
+            elif main_choice == 1:
+                # 첫 번째 코드 기능: 요약된 분야별 정보 보기
+                print("\n아래 분야 중에서 관심 있는 분야를 선택하세요:")
+                for idx, 분야 in enumerate(main_job_data['분야'], start=1):
+                    print(f"{idx}. {분야}")
+
+                choice = int(input("\n원하는 분야의 번호를 입력하세요: "))
+                if choice < 1 or choice > len(main_job_data):
+                    print("유효한 번호를 입력해주세요.")
+                    continue
+
+                selected_row = main_job_data.iloc[choice - 1]
+                print("\n===== 선택한 분야 정보 =====")
+                print(f"**분야**: {selected_row['분야']}")
+                print(f"**주요 직무**: {selected_row['주요 직무']}")
+                print(f"**취업 가능 기업 **: {selected_row['취업 가능 기업']}")
+                print(f"**필요 역량/기술**: {selected_row['필요 역량/기술']}")
+                print(f"**추천 자격증**: {selected_row['추천 자격증']}")
+                print("========================")
+
+            elif main_choice == 2:
+                # 두 번째 코드 기능: 상세 기업별 취업 공고 보기
+                분야목록 = sector_job_data['분야'].unique()
+                print("\n아래 분야 중에서 관심 있는 분야를 선택하세요:")
+                for idx, 분야 in enumerate(분야목록, start=1):
+                    print(f"{idx}. {분야}")
+
+                분야_choice = int(input("\n원하는 분야의 번호를 입력하세요: "))
+                if 분야_choice < 1 or 분야_choice > len(분야목록):
+                    print("유효한 번호를 입력해주세요.")
+                    continue
+
+                selected_field = 분야목록[분야_choice - 1]
+                selected_data = sector_job_data[sector_job_data['분야'] == selected_field]
+
+                기업목록 = selected_data['기업명'].unique()
+                print(f"\n[{selected_field}] 분야의 기업 목록:")
+                for idx, 기업명 in enumerate(기업목록, start=1):
+                    print(f"{idx}. {기업명}")
+
+                기업_choice = int(input("\n보고 싶은 기업의 번호를 입력하세요: "))
+                if 기업_choice < 1 or 기업_choice > len(기업목록):
+                    print("유효한 번호를 입력해주세요.")
+                    continue
+
+                selected_company = 기업목록[기업_choice - 1]
+                company_data = selected_data[selected_data['기업명'] == selected_company]
+
+                print(f"\n===== [{selected_company}] =====")
+                for idx, row in company_data.iterrows():
+                    print(f"\n**채용 직무/분야**: {row['채용 직무/분야']}")
+                    print(f"**주요 업무**: {row['주요 업무']}")
+                    print(f"**지원 자격 및 우대사항**: {row['지원 자격 및 우대사항']}")
+                    print(f"**근무 조건**: {row['근무 조건']}")
+                    print(f"**모집 기간**: {row['모집 기간']}")
+                    print(f"**지원 방법**: {row['지원 방법']}")
+                    print(f"**기타 사항**: {row['기타 사항']}")
+                    print("-----------------------------")
+            else:
+                print("유효한 번호를 입력해주세요.")
+
+        except ValueError:
+            print("숫자를 입력해주세요.")
+
+# 프로그램 실행
+job_assistant()
