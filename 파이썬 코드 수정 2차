@@ -1,0 +1,176 @@
+import pandas as pd
+
+class JobDataManager:
+    """데이터 로드 및 관리 클래스"""
+    def __init__(self, main_file_path, sector_file_paths):
+        self.main_file_path = main_file_path
+        self.sector_file_paths = sector_file_paths
+        self.main_data = None
+        self.sector_data = None
+
+    def load_data(self):
+        # 메인 데이터 로드
+        try:
+            self.main_data = pd.read_csv(self.main_file_path, encoding='euc-kr')
+        except Exception as e:
+            print(f"Error loading main file: {e}")
+        
+        # 분야별 데이터 로드
+        all_data = []
+        for name, path in self.sector_file_paths.items():
+            try:
+                df = pd.read_csv(path, encoding='euc-kr')
+                df['분야'] = name
+                all_data.append(df)
+            except Exception as e:
+                print(f"Error loading {name}: {e}")
+        
+        self.sector_data = pd.concat(all_data, ignore_index=True)
+
+    def get_main_data(self):
+        return self.main_data
+
+    def get_sector_data(self):
+        return self.sector_data
+
+    def get_sector_list(self):
+        return self.sector_data['분야'].unique()
+
+    def get_companies_by_sector(self, sector_name):
+        return self.sector_data[self.sector_data['분야'] == sector_name]['기업명'].unique()
+
+    def get_company_details(self, sector_name, company_name):
+        return self.sector_data[(self.sector_data['분야'] == sector_name) & 
+                                (self.sector_data['기업명'] == company_name)]
+
+
+class JobAssistant:
+    """사용자와 상호작용을 관리하는 클래스"""
+    def __init__(self, job_data_manager):
+        self.manager = job_data_manager
+        self.target_companies = ["현대자동차", "넥슨", "LG생활건강", "기아", "롯데마트", "삼성전자", "아모레퍼시픽"]
+
+    def start(self):
+        while True:
+            print("\n산업경영공학과 졸업생을 위한 취업 도우미 프로그램입니다!")
+            print("\n1. 분야별 취업 정보 요약")
+            print("2. 기업별 취업 공고")
+            print("3. 기업별 합격자소서 보기")
+            print("4. 종료")
+            
+            try:
+                choice = int(input("\n원하는 기능의 번호를 입력하세요: "))
+                if choice == 1:
+                    self.show_sector_summary()
+                elif choice == 2:
+                    self.show_company_jobs()
+                elif choice == 3:
+                    self.show_success_stories()
+                elif choice == 4:
+                    print("프로그램을 종료합니다.")
+                    break
+                else:
+                    print("유효한 번호를 입력해주세요.")
+            except ValueError:
+                print("숫자를 입력해주세요.")
+
+    def show_sector_summary(self):
+        main_data = self.manager.get_main_data()
+        print("\n아래 분야 중에서 관심 있는 분야를 선택하세요:")
+        for idx, row in main_data.iterrows():
+            print(f"{idx + 1}. {row['분야']}")
+
+        try:
+            choice = int(input("\n원하는 분야의 번호를 입력하세요: "))
+            selected_row = main_data.iloc[choice - 1]
+            print("\n===== 선택한 분야 정보 =====")
+            print(f"**분야**: {selected_row['분야']}")
+            print(f"**주요 직무**: {selected_row['주요 직무']}")
+            print(f"**취업 가능 기업**: {selected_row['취업 가능 기업']}")
+            print(f"**필요 역량/기술**: {selected_row['필요 역량/기술']}")
+            print(f"**추천 자격증**: {selected_row['추천 자격증']}")
+            print(f"**추천 MBTI**: {selected_row['추천 MBTI']}")
+            print("========================")
+        except (ValueError, IndexError):
+            print("유효한 번호를 입력해주세요.")
+
+    def show_company_jobs(self):
+        sector_list = self.manager.get_sector_list()
+        print("\n아래 분야 중에서 관심 있는 분야를 선택하세요:")
+        for idx, sector in enumerate(sector_list, start=1):
+            print(f"{idx}. {sector}")
+
+        try:
+            sector_choice = int(input("\n원하는 분야의 번호를 입력하세요: "))
+            selected_sector = sector_list[sector_choice - 1]
+            companies = self.manager.get_companies_by_sector(selected_sector)
+
+            print(f"\n[{selected_sector}] 분야의 기업 목록:")
+            for idx, company in enumerate(companies, start=1):
+                print(f"{idx}. {company}")
+
+            company_choice = int(input("\n보고 싶은 기업의 번호를 입력하세요: "))
+            selected_company = companies[company_choice - 1]
+            company_data = self.manager.get_company_details(selected_sector, selected_company)
+
+            print(f"\n===== [{selected_company}] =====")
+            for idx, row in company_data.iterrows():
+                print(f"\n**채용 직무/분야**: {row['채용 직무/분야']}")
+                print(f"**주요 업무**: {row['주요 업무']}")
+                print(f"**지원 자격 및 우대사항**: {row['지원 자격 및 우대사항']}")
+                print(f"**근무 조건**: {row['근무 조건']}")
+                print(f"**모집 기간**: {row['모집 기간']}")
+                print(f"**지원 방법**: {row['지원 방법']}")
+                print(f"**기타 사항**: {row['기타 사항']}")
+                print("-----------------------------")
+        except (ValueError, IndexError):
+            print("유효한 번호를 입력해주세요.")
+
+    def show_success_stories(self):
+        sector_data = self.manager.get_sector_data()
+        company_sector_map = {
+            "현대자동차": "제조 및 생산 기업",
+            "넥슨": "데이터분석 기업",
+            "LG생활건강": "물류 및 SCM기업",
+            "기아": "IT 및 기술 개발 기업",
+            "롯데마트": "서비스 및 영업 기업",
+            "삼성전자": "경영 지원 및 컨설팅 기업",
+            "아모레퍼시픽": "마케팅 및 기획 기업"
+        }
+
+        available_companies = [c for c in self.target_companies if c in sector_data['기업명'].unique()]
+
+        print("\n아래 기업 중에서 합격자소서를 보고 싶은 기업을 선택하세요:")
+        for idx, company in enumerate(available_companies, start=1):
+            sector = company_sector_map.get(company, "알 수 없음")
+            print(f"{idx}. {company} ({sector})")
+
+        try:
+            choice = int(input("\n원하는 기업의 번호를 입력하세요: "))
+            selected_company = available_companies[choice - 1]
+            company_data = sector_data[sector_data['기업명'] == selected_company]
+
+            합격자소서 = company_data.iloc[0].get('합격자소서', '합격자소서 데이터가 없습니다.')
+            print(f"\n===== [{selected_company}] 합격자소서 =====")
+            print(합격자소서)
+        except (ValueError, IndexError):
+            print("유효한 번호를 입력해주세요.")
+
+
+# 실행 코드
+main_file_path = "/content/sample_data/취업.csv"
+file_paths = {
+    "제조 및 생산 기업": "/content/sample_data/제조 및 생산 기업.csv",
+    "데이터분석 기업": "/content/sample_data/데이터분석 기업.csv",
+    "물류 및 SCM기업": "/content/sample_data/물류 및 SCM기업.csv",
+    "IT 및 기술 개발 기업": "/content/sample_data/IT 및 기술 개발 기업.csv",
+    "서비스 및 영업 기업": "/content/sample_data/서비스 및 영업 기업.csv",
+    "경영 지원 및 컨설팅 기업": "/content/sample_data/경영 지원 및 컨설팅 기업.csv",
+    "마케팅 및 기획 기업": "/content/sample_data/마케팅 및 기획 기업.csv",
+}
+
+manager = JobDataManager(main_file_path, file_paths)
+manager.load_data()
+
+assistant = JobAssistant(manager)
+assistant.start()
